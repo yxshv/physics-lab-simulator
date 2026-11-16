@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Physics Lab Simulator</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="lobby">
+  <header class="lobby-head">
+    <h1>Physics Lab Simulator</h1>
+    <p>Perform each experiment on the same instruments you use in the lab. Wire the circuits, switch on, adjust the knobs, read the displays and scales yourself, and enter your readings by hand.</p>
+  </header>
+  <div id="cards"></div>
+  <footer class="lobby-foot">Tips: drag the bench to pan, scroll on the bench to zoom, scroll on a knob to turn it (hold Shift for fine). Click a socket, then another socket, to add a patch cord.</footer>
+</div>
+
+<div id="app" hidden>
+  <header id="top">
+    <button id="back" class="btn ghost">&larr; All experiments</button>
+    <div class="titles"><h1 id="title"></h1><div id="subtitle"></div></div>
+    <div class="spacer"></div>
+    <label class="speed">Lab clock <select id="speed">
+      <option value="1">1&times; (real time)</option><option value="2">2&times;</option><option value="5">5&times;</option><option value="10">10&times;</option><option value="30">30&times;</option>
+    </select></label>
+    <button id="resetBtn" class="btn ghost" title="Put all apparatus back to its starting state (keeps your observations)">Reset apparatus</button>
+    <button id="newSetup" class="btn ghost" title="Move to a different bench: new sample/lens/tube parameters">Different bench</button>
+    <button id="toggleSide" class="btn ghost">Notebook &#9656;</button>
+  </header>
+  <div id="main">
+    <div id="benchHost"></div>
+    <aside id="side">
+      <nav><button class="active" data-tab="proc">Procedure</button><button data-tab="obs">Observations</button><button data-tab="man">Manual</button></nav>
+      <section id="proc"></section>
+      <section id="obs" hidden></section>
+      <section id="man" hidden></section>
+    </aside>
+  </div>
+  <footer id="tools">
+    <div id="views"></div>
+    <div id="palette"></div>
+    <div id="hint"></div>
+  </footer>
+</div>
+
+<div id="windows"></div>
+<div id="toasts"></div>
+<div id="tip"></div>
+<div id="menu"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
