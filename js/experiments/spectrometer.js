@@ -250,8 +250,17 @@ export default {
       }
       return out;
     }
+    function fineBy(min) { return () => { if (!S.telLocked) { ui.toast('Lock the telescope to use the fine-motion screw.', 'warn'); return; } fineK.set(fineK.value + min / 60); }; }
+    function tableBy(deg) { return () => { if (S.tableLocked) { ui.toast('The prism table is locked. Loosen its locking screw first.', 'warn'); return; } S.table = wrap360(S.table + deg); drawTable(); }; }
+    function telBy(deg) { return () => { if (S.telLocked) { ui.toast('The telescope is locked — use the fine-motion screw.', 'warn'); return; } S.phi = wrap360(S.phi + deg); drawTel(); }; }
+    const fineRow = { label: 'Fine motion (locked):', items: [['◀ 10′', fineBy(-10)], ['◀ 1′', fineBy(-1)], ['◀ 0.2′', fineBy(-0.2)], ['0.2′ ▶', fineBy(0.2)], ['1′ ▶', fineBy(1)], ['10′ ▶', fineBy(10)]] };
     function openEye() {
       ui.canvasWindow('sp-eye', 'Telescope — eyepiece view', { w: 380, h: 380,
+        buttons: [
+          { label: 'Swing telescope:', items: [['◀ 5°', telBy(-5)], ['◀ 0.5°', telBy(-0.5)], ['0.5° ▶', telBy(0.5)], ['5° ▶', telBy(5)]] },
+          fineRow,
+          { label: 'Rotate prism table:', items: [['⟲ 5°', tableBy(-5)], ['⟲ 0.5°', tableBy(-0.5)], ['⟲ 0.1°', tableBy(-0.1)], ['0.1° ⟳', tableBy(0.1)], ['0.5° ⟳', tableBy(0.5)], ['5° ⟳', tableBy(5)]] },
+        ],
         footer: () => { const d = document.createElement('div'); d.className = 'ctrls'; d.innerHTML = '<span class="muted">Scroll here to work the fine-motion screw (telescope must be locked).</span>'; return d; },
         onWheel: (dir, e) => { if (!S.telLocked) { ui.toast('Lock the telescope to use the fine-motion screw.', 'warn'); return; } fineK.set(fineK.value + dir * (e.shiftKey ? 1 / 600 : 1 / 60)); },
         draw: (c, W, H) => {
@@ -300,7 +309,7 @@ export default {
         } });
     }
     function openVernier(n) {
-      ui.canvasWindow('sp-vern' + n, `Vernier ${n} (through its magnifier)`, { w: 560, h: 190,
+      ui.canvasWindow('sp-vern' + n, `Vernier ${n} (through its magnifier)`, { w: 560, h: 190, buttons: [fineRow],
         onWheel: (dir, e) => { if (S.telLocked) fineK.set(fineK.value + dir * (e.shiftKey ? 1 / 600 : 1 / 60)); },
         draw: (c, W, H) => {
           const read = wrap360(telAngle() + S.disc + (n === 2 ? 180 : 0));

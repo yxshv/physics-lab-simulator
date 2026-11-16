@@ -122,4 +122,29 @@ button { font: inherit; }
   #app { position: static; }
   #obs { display: block !important; overflow: visible; }
 }
-@media (max-width: 900px) { #side { width: 100%; max-width: none; position: absolute; right: 0; top: 46px; bottom: 38px; z-index: 50; } }
+.knobpad { display: flex; gap: 4px; padding: 2px 6px 4px; flex-wrap: wrap; }
+#menu .knobpad button { display: inline-block; width: auto; border: 1px solid #cfcbc2; padding: 6px 10px; min-width: 44px; text-align: center; touch-action: none; }
+.stepbtns button { touch-action: none; user-select: none; -webkit-user-select: none; }
+.win { max-width: calc(100vw - 8px); }
+.win-head { touch-action: none; }
+.wincanvas { height: auto; }
+
+@media (max-width: 900px) {
+  #main { position: relative; }
+  #side { width: 100%; max-width: none; position: absolute; inset: 0; z-index: 50; }
+  #top { flex-wrap: wrap; gap: 6px; padding: 6px 8px; }
+  #top h1 { font-size: 14px; }
+  #subtitle, #hint { display: none; }
+  #top .btn { padding: 4px 8px; font-size: 12px; }
+  .speed { font-size: 11px; }
+  #tools { overflow-x: auto; flex-wrap: nowrap; gap: 10px; padding: 4px 6px; -webkit-overflow-scrolling: touch; }
+  #views, #palette { flex-wrap: nowrap; }
+  #views .btn { white-space: nowrap; }
+  .btn.sm { padding: 5px 9px; font-size: 13px; }
+  .win-body { padding: 6px; }
+  .win-body .ctrls { gap: 4px; }
+  .fields { grid-template-columns: 1fr; }
+  #lobby { padding: 18px 14px; }
+  .lobby-head h1 { font-size: 22px; }
+  #tip { display: none !important; }
+}

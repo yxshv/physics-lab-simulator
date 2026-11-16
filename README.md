@@ -31,6 +31,7 @@ Then open http://localhost:8765. Any static file server works; `serve.py` only t
 - Instrument leads (probe leads, coil leads, BNC cables): click the plug, then a socket.
 - Click apparatus (probe stand, lens box, grating box, specimens, oven…) for the actions you can take with it.
 - Eyepieces, verniers, the spherometer, scales and the CRO screen open magnified close-up windows.
+- On a phone or tablet: drag with one finger to pan, pinch to zoom (or use the − / + buttons), tap a knob for a pad of turn buttons, and use the step buttons under each close-up view. The Notebook button switches between the bench and the tables.
 - **Lab clock** speeds up slow things such as lamp warm-up and oven heating.
 - **Different bench** changes the hidden sample, lens and set-up values, so each student gets their own numbers.
 

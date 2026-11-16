@@ -55,6 +55,7 @@ function open(id, freshSeed = false) {
   ui.mount(exp, ctx);
   current = { id, ctx };
   window.__lab = ctx;
+  if (window.innerWidth < 900) setSide(false);
   requestAnimationFrame(() => { const v = (res.views || [])[0]; if (v) bench.zoomTo(v.x, v.y, v.w, v.h, false); else bench.fit(); });
 }
 
@@ -84,11 +85,12 @@ document.getElementById('resetBtn').onclick = async () => { if (current && await
 document.getElementById('newSetup').onclick = async () => {
   if (current && await ui.confirm('Move to a different bench? The sample / lens / setup values change, so start a fresh set of readings.')) open(current.id, true);
 };
-document.getElementById('toggleSide').onclick = () => {
+function setSide(show) {
   const s = document.getElementById('side');
-  s.classList.toggle('hide');
-  document.getElementById('toggleSide').innerHTML = s.classList.contains('hide') ? 'Notebook &#9666;' : 'Notebook &#9656;';
-};
+  s.classList.toggle('hide', !show);
+  document.getElementById('toggleSide').innerHTML = show ? (window.innerWidth < 900 ? 'Back to bench' : 'Notebook &#9656;') : 'Notebook &#9666;';
+}
+document.getElementById('toggleSide').onclick = () => setSide(document.getElementById('side').classList.contains('hide'));
 window.addEventListener('hashchange', route);
 
 loadAll().then(() => { lobby(); route(); }).catch(err => {

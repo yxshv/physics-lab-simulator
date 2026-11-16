@@ -144,20 +144,47 @@ export class Bench {
     requestAnimationFrame(step);
   }
   fit() { this.zoomTo(0, 0, this.W, this.H); }
+  zoomBy(k) {
+    const cx = this.vb.x + this.vb.w / 2, cy = this.vb.y + this.vb.h / 2;
+    const nw = clamp(this.vb.w * k, 60, this.W * 1.6), kk = nw / this.vb.w;
+    this.zoomTo(cx - this.vb.w * kk / 2, cy - this.vb.h * kk / 2, this.vb.w * kk, this.vb.h * kk);
+  }
 
   _initPanZoom() {
     const svg = this.svg;
-    let pan = null;
+    let pan = null, pinch = null, pinched = false;
+    const pts = new Map();
+    const startPan = (e) => { pan = { x: e.clientX, y: e.clientY, vx: this.vb.x, vy: this.vb.y, moved: pinched, id: e.pointerId }; };
     svg.addEventListener('pointerdown', (e) => {
       if (e.target.closest('[data-ctrl]')) return;
       this.closeMenu();
-      pan = { x: e.clientX, y: e.clientY, vx: this.vb.x, vy: this.vb.y, moved: false, id: e.pointerId };
-      svg.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      try { svg.setPointerCapture(e.pointerId); } catch { }
+      if (pts.size === 1) { pinched = false; startPan(e); }
+      else if (pts.size === 2) {
+        const [a, b] = [...pts.values()];
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, w: this.vb.w, h: this.vb.h, anchor: this.toWorld(mx, my) };
+        pan = null; pinched = true;
+      }
     });
     svg.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pts.size >= 2) {
+        const [a, b] = [...pts.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        const nw = clamp(pinch.w * pinch.d / d, 60, this.W * 1.6);
+        this.vb.h = pinch.h * nw / pinch.w; this.vb.w = nw;
+        this._applyVB();
+        const cur = this.toWorld((a.x + b.x) / 2, (a.y + b.y) / 2);
+        this.vb.x += pinch.anchor.x - cur.x; this.vb.y += pinch.anchor.y - cur.y;
+        this._applyVB();
+        return;
+      }
       if (!pan) return;
       const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
-      if (Math.abs(dx) + Math.abs(dy) > 3) pan.moved = true;
+      if (Math.abs(dx) + Math.abs(dy) > 4) pan.moved = true;
       if (pan.moved) {
         const s = this._scale();
         this.vb.x = pan.vx - dx * s; this.vb.y = pan.vy - dy * s;
@@ -166,9 +193,13 @@ export class Bench {
       }
     });
     const end = (e) => {
-      if (!pan) return;
-      if (!pan.moved) this._bgClick.forEach(f => f(e));
-      pan = null; svg.style.cursor = '';
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = null;
+      if (pts.size === 1) { const [id, p] = [...pts.entries()][0]; startPan({ clientX: p.x, clientY: p.y, pointerId: id }); return; }
+      if (pts.size > 0) return;
+      if (pan && !pan.moved && !pinched) this._bgClick.forEach(f => f(e));
+      pan = null; pinched = false; svg.style.cursor = '';
     };
     svg.addEventListener('pointerup', end);
     svg.addEventListener('pointercancel', end);
@@ -221,6 +252,34 @@ export class Bench {
     m.style.top = Math.min(window.innerHeight - m.offsetHeight - 8, e.clientY + 4) + 'px';
   }
   closeMenu() { if (this.menuEl) this.menuEl.style.display = 'none'; }
+  // tap on a knob -> small pad of turn buttons (hold to repeat); works without a scroll wheel
+  knobPad(e, knob) {
+    const m = this.menuEl;
+    m.innerHTML = '';
+    const hd = document.createElement('div'); hd.className = 'menu-title'; m.appendChild(hd);
+    const upd = () => { hd.innerHTML = knob.tip().split('<br>')[0].replace(/<[^>]+>/g, ''); };
+    upd();
+    const row = document.createElement('div'); row.className = 'knobpad'; m.appendChild(row);
+    const add = (label, fn) => {
+      const b = document.createElement('button'); b.textContent = label; b.className = 'btn sm';
+      let t1, t2;
+      const go = () => { fn(); upd(); };
+      const stop = () => { clearTimeout(t1); clearInterval(t2); };
+      b.addEventListener('pointerdown', (ev) => { ev.preventDefault(); ev.stopPropagation(); go(); t1 = setTimeout(() => { t2 = setInterval(go, 70); }, 380); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => b.addEventListener(t, stop));
+      row.appendChild(b);
+    };
+    if (knob.steps) { add('⟲ back', () => knob._nudge(-1)); add('forward ⟳', () => knob._nudge(1)); }
+    else {
+      const n = (k) => () => { for (let i = 0; i < Math.abs(k); i++) knob._nudge(Math.sign(k), false); };
+      add('⟲⟲', n(-10)); add('⟲', n(-1)); add('⟲ fine', () => knob._nudge(-1, true));
+      add('fine ⟳', () => knob._nudge(1, true)); add('⟳', n(1)); add('⟳⟳', n(10));
+    }
+    const hint = document.createElement('div'); hint.className = 'menu-empty'; hint.textContent = 'Hold a button to keep turning. ⟳ = clockwise.'; m.appendChild(hint);
+    m.style.display = 'block';
+    m.style.left = Math.max(4, Math.min(window.innerWidth - m.offsetWidth - 8, e.clientX - m.offsetWidth / 2)) + 'px';
+    m.style.top = Math.max(4, Math.min(window.innerHeight - m.offsetHeight - 8, e.clientY + 18)) + 'px';
+  }
 
   // make an element interactive (tooltip + click / menu)
   interactive(el, { tip, click, menu, title }) {

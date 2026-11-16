@@ -269,6 +269,8 @@ export class UI {
     const box = $('#views');
     box.innerHTML = '';
     box.appendChild(el('span', { class: 'lbl' }, 'View:'));
+    box.appendChild(el('button', { class: 'btn sm', title: 'Zoom out', onclick: () => this.ctx.bench.zoomBy(1.4) }, '−'));
+    box.appendChild(el('button', { class: 'btn sm', title: 'Zoom in', onclick: () => this.ctx.bench.zoomBy(1 / 1.4) }, '+'));
     views.forEach(v => box.appendChild(el('button', { class: 'btn sm', onclick: () => this.ctx.bench.zoomTo(v.x, v.y, v.w, v.h) }, v.name)));
   }
   _palette() {
@@ -305,6 +307,11 @@ export class UI {
     root.style.left = (x ?? (80 + n * 34)) + 'px';
     root.style.top = (y ?? (90 + n * 28)) + 'px';
     $('#windows').appendChild(root);
+    const clampPos = () => {
+      root.style.left = Math.max(4, Math.min(root.offsetLeft, window.innerWidth - root.offsetWidth - 4)) + 'px';
+      root.style.top = Math.max(4, Math.min(root.offsetTop, window.innerHeight - 80)) + 'px';
+    };
+    setTimeout(clampPos, 0); setTimeout(clampPos, 120);
     const api = {
       el: root, body,
       front: () => { root.style.zIndex = ++this.z; },
@@ -322,13 +329,26 @@ export class UI {
     return api;
   }
   // a window that hosts a canvas, redrawn by draw(ctx, W, H) every frame while open
-  canvasWindow(id, title, { w = 420, h = 420, draw, onWheel, onDrag, onClick, footer, css } = {}) {
+  canvasWindow(id, title, { w = 420, h = 420, draw, onWheel, onDrag, onClick, footer, css, buttons } = {}) {
     const existing = this.windows.get(id);
     if (existing) { existing.front(); return existing; }
     const win = this.window(id, title, { w: w + 16, onClose: () => { clearInterval(win._raf); } });
     const cv = el('canvas', { width: w * 2, height: h * 2, class: 'wincanvas' + (css ? ' ' + css : '') });
-    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    cv.style.width = '100%'; cv.style.maxWidth = w + 'px'; cv.style.aspectRatio = `${w} / ${h}`;
     win.body.appendChild(cv);
+    // on-screen step buttons (for touch screens, where there is no scroll wheel); hold to repeat
+    (buttons || []).forEach(row => {
+      const d = el('div', { class: 'ctrls stepbtns' }, el('span', {}, row.label));
+      row.items.forEach(([text, fn]) => {
+        const b = el('button', { class: 'btn sm' }, text);
+        let t1, t2;
+        const stop = () => { clearTimeout(t1); clearInterval(t2); };
+        b.addEventListener('pointerdown', (e) => { e.preventDefault(); fn(); t1 = setTimeout(() => { t2 = setInterval(fn, 70); }, 380); });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+        d.appendChild(b);
+      });
+      win.body.appendChild(d);
+    });
     if (footer) win.body.appendChild(typeof footer === 'function' ? footer(win) : footer);
     const ctx = cv.getContext('2d');
     win.canvas = cv;

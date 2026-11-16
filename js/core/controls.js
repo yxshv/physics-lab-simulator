@@ -79,10 +79,12 @@ export class Knob {
     el.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
       el.setPointerCapture(e.pointerId);
-      st = { x: e.clientX, y: e.clientY, acc: 0 }; el._dragging = true;
+      st = { x: e.clientX, y: e.clientY, acc: 0, x0: e.clientX, y0: e.clientY, moved: false }; el._dragging = true;
     });
     el.addEventListener('pointermove', (e) => {
       if (!st || this.locked) return;
+      if (!st.moved && Math.abs(e.clientX - st.x0) + Math.abs(e.clientY - st.y0) < 4) return;
+      st.moved = true;
       const d = (e.clientX - st.x) - (e.clientY - st.y);
       st.x = e.clientX; st.y = e.clientY;
       const fine = e.shiftKey ? 0.1 : 1;
@@ -96,7 +98,11 @@ export class Knob {
         this.set(this.value + d * this.dragFrac * fine * (this.max - this.min));
       }
     });
-    const up = () => { st = null; el._dragging = false; };
+    const up = (e) => {
+      const tap = st && !st.moved && e.type === 'pointerup';
+      st = null; el._dragging = false;
+      if (tap) this.bench.knobPad(e, this);
+    };
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
     el.addEventListener('click', e => e.stopPropagation());

@@ -109,7 +109,9 @@ export default {
     }
     drawRuler();
     function openRuler() {
+      const rd = (d) => () => setY(S.y + d);
       ui.canvasWindow('kt-rule', 'Steel scale at the cut mark (close-up)', { w: 560, h: 180, css: 'light',
+        buttons: [{ label: 'Slide rod (mm):', items: [['◀ 10', rd(-10)], ['◀ 1', rd(-1)], ['◀ 0.1', rd(-0.1)], ['0.1 ▶', rd(0.1)], ['1 ▶', rd(1)], ['10 ▶', rd(10)]] }],
         onWheel: (dir, e) => setY(S.y + dir * (e.shiftKey ? 0.1 : 0.5)),
         footer: () => { const d = document.createElement('div'); d.className = 'ctrls'; d.innerHTML = '<span class="muted">Scroll here to move the rod (0.5 mm, Shift 0.1 mm). Your eye follows the cut mark.</span>'; return d; },
         draw: (c, W, H) => {

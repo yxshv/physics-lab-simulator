@@ -53,6 +53,8 @@ export default {
       lampOn: false, warm: 0, plate: 45 + (rand() < 0.5 ? -1 : 1) * (6 + rand() * 6), z: 8, xc: 30, screw: 30, yoff: (rand() - 0.5) * 1.6,
       lens: 'box', clean: false, tilt: P.tilt0, spher: 'table', spherS: 3, paper: false,
     };
+    S.z = P.z0 + (rand() < 0.5 ? -1 : 1) * (3 + rand() * 3); // start a few mm out of focus
+    S.screw = S.xc = P.x0 + (rand() < 0.5 ? -1 : 1) * (2 + rand() * 3); // microscope roughly over the lens
 
     // ------------------------------------------------ sodium lamp power supply
     const ps = cabinet(L.inst, 120, 470, 230, 130, { depth: 16, fill: '#24314f', face: '#e9ecf2', stroke: '#18223a' });
@@ -150,13 +152,13 @@ export default {
     function placeEye() { eye.innerHTML = ''; const r = rect(eye, -12, tubeG._eyeY - 4, 24, 34, { fill: 'transparent' }); }
     placeEye();
     bench.interactive(eye, { tip: '<b>Eyepiece</b><br><span class="tip-hint">click to look through the microscope</span>', click: () => openScope() });
-    const focusKnob = new Knob(bench, micro, { x: 30, y: 340, r: 8, style: 'chrome', unitPerTurn: 12, min: 0, max: 40, value: S.z, wheelUnits: 0.05, dragUnits: 0.02, name: 'Rack & pinion focusing knob', hint: 'turn to raise / lower the microscope (Shift = fine)', onChange: v => { S.z = v; drawTube(); placeEye(); } });
-    rect(micro, 12, 336, 14, 8, { fill: '#26282c' });
+    rect(micro, 12, 335, 14, 10, { fill: '#26282c' });
+    const focusKnob = new Knob(bench, micro, { x: 34, y: 340, r: 11, style: 'chrome', unitPerTurn: 8, min: 0, max: 40, value: S.z, wheelUnits: 0.25, dragUnits: 0.05, name: 'Rack & pinion focusing knob', hint: 'scroll / drag to raise or lower the microscope (0.25 mm per notch, Shift = 0.025 mm)', onChange: v => { S.z = v; drawTube(); placeEye(); } });
     function placeCarriage() { CAR.setAttribute('transform', `translate(${scaleX0 + S.xc},0)`); }
     placeCarriage();
     // micrometer screw at the right end of the slide
     rect(L.inst, ax + aw - 6, 414, 30, 5, { fill: 'url(#gChrome)' });
-    const screw = new Knob(bench, L.inst, { x: ax + aw + 32, y: 418, r: 11, style: 'drum', unitPerTurn: 1, min: 6, max: 165, value: S.screw, wheelUnits: 0.01, dragUnits: 0.004,
+    const screw = new Knob(bench, L.inst, { x: ax + aw + 32, y: 418, r: 11, style: 'drum', unitPerTurn: 1, min: 6, max: 165, value: S.screw, wheelUnits: 0.01, dragUnits: 0.02,
       name: 'Horizontal micrometer screw (moves the microscope)', hint: 'scroll: 0.01 mm per notch, Shift = finer · drag for coarse',
       onChange: v => {
         const b = 0.03; // backlash (mm)
@@ -267,7 +269,7 @@ export default {
       const d = id.data;
       const sc = VIEW / FOV;
       const Xc = S.xc - P.x0; // crosswire position relative to ring centre (mm)
-      const sigma = Math.abs(S.z - P.z0) * 0.09; // blur (mm)
+      const sigma = Math.abs(S.z - P.z0) * 0.035; // blur (mm): rings fade in as you approach focus
       const t0 = S.clean ? P.t0clean : P.t0dirty;
       const col = S.warm;
       const cr = 255, cg = 120 + 95 * col, cb = 40 * (1 - col) + 10;
@@ -304,12 +306,18 @@ export default {
     function openScope() {
       const footer = () => {
         const d = document.createElement('div'); d.className = 'ctrls';
-        d.innerHTML = '<span>Eyepiece rotation:</span>';
-        [['⟲ 1°', -1], ['⟲ 0.2°', -0.2], ['0.2° ⟳', 0.2], ['1° ⟳', 1]].forEach(([l, v]) => { const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = l; b.onclick = () => { S.tilt += v; }; d.appendChild(b); });
-        const s = document.createElement('span'); s.className = 'muted'; s.textContent = 'Scroll in the view to turn the micrometer screw (Shift = finer).'; d.appendChild(s);
+        const s = document.createElement('span'); s.className = 'muted'; s.textContent = 'Raise or lower the microscope until the rings look sharpest. Buttons repeat while held; on a computer you can also scroll in the view to turn the screw (Shift = finer).'; d.appendChild(s);
         return d;
       };
-      ui.canvasWindow('ns-scope', 'Travelling microscope — eyepiece view', { w: 360, h: 360, footer,
+      const mv = (d) => () => screw.set(screw.value + d);
+      const fz = (d) => () => focusKnob.set(focusKnob.value + d);
+      const buttons = [
+        { label: 'Micrometer screw:', items: [['◀ 0.1', mv(-0.1)], ['◀ 0.01', mv(-0.01)], ['◀ .001', mv(-0.001)], ['.001 ▶', mv(0.001)], ['0.01 ▶', mv(0.01)], ['0.1 ▶', mv(0.1)]] },
+        { label: 'Focus (mm):', items: [['▲ 1', fz(1)], ['▲ 0.1', fz(0.1)], ['▲ 0.02', fz(0.02)], ['▼ 0.02', fz(-0.02)], ['▼ 0.1', fz(-0.1)], ['▼ 1', fz(-1)]] },
+        { label: 'Eyepiece rotation:', items: [['⟲ 1°', () => { S.tilt -= 1; }], ['⟲ 0.2°', () => { S.tilt -= 0.2; }], ['0.2° ⟳', () => { S.tilt += 0.2; }], ['1° ⟳', () => { S.tilt += 1; }]] },
+        { label: 'Centring screw:', items: [['front 0.1', () => centreKnob.set(centreKnob.value - 0.1)], ['front 0.01', () => centreKnob.set(centreKnob.value - 0.01)], ['back 0.01', () => centreKnob.set(centreKnob.value + 0.01)], ['back 0.1', () => centreKnob.set(centreKnob.value + 0.1)]] },
+      ];
+      ui.canvasWindow('ns-scope', 'Travelling microscope — eyepiece view', { w: 360, h: 360, footer, buttons,
         onWheel: (dir, e) => screw.set(screw.value + dir * (e.shiftKey ? 0.001 : 0.01)),
         draw: (c, W, H) => {
           renderField();
@@ -326,7 +334,9 @@ export default {
     }
     // ------------------------------------------------ vernier through magnifier
     function openVernier() {
+      const mv = (d) => () => screw.set(screw.value + d);
       ui.canvasWindow('ns-vernier', 'Main scale and vernier (through the magnifier)', { w: 560, h: 200,
+        buttons: [{ label: 'Micrometer screw:', items: [['◀ 1', mv(-1)], ['◀ 0.1', mv(-0.1)], ['◀ 0.01', mv(-0.01)], ['0.01 ▶', mv(0.01)], ['0.1 ▶', mv(0.1)], ['1 ▶', mv(1)]] }],
         onWheel: (dir, e) => screw.set(screw.value + dir * (e.shiftKey ? 0.001 : 0.01)),
         draw: (c, W, H) => {
           const k = 18; // px per mm
@@ -376,7 +386,9 @@ export default {
         d.innerHTML = '<span class="muted">Scroll or drag in the picture to turn the milled head (1 notch = 1 head division; Shift = 0.1 division).</span>';
         return d;
       };
+      const hd = (d) => () => { S.spherS = clamp(S.spherS + d, 0, 9); };
       ui.canvasWindow('ns-spher', 'Spherometer — close-up', { w: 600, h: 300, footer,
+        buttons: [{ label: 'Milled head:', items: [['▼ 1 turn', hd(-1)], ['▼ 10 div', hd(-0.1)], ['▼ 1 div', hd(-0.01)], ['▼ 0.1', hd(-0.001)], ['▲ 0.1', hd(0.001)], ['▲ 1 div', hd(0.01)], ['▲ 10 div', hd(0.1)], ['▲ 1 turn', hd(1)]] }],
         onWheel: (dir, e) => { S.spherS += dir * (e.shiftKey ? 0.001 : 0.01); },
         onDrag: (dx, dy) => { S.spherS += (dx - dy) * 0.002; },
         draw: (c, W, H) => {
@@ -449,6 +461,10 @@ export default {
       const pts = (() => { const [a, b, cc] = P.legs; const A = [12, 30], B = [12 + a, 30]; const ang = Math.acos((a * a + cc * cc - b * b) / (2 * a * cc)); const C = [12 + cc * Math.cos(ang), 30 - cc * Math.sin(ang)]; return [A, B, C]; })();
       const k = 9; // px per mm
       ui.canvasWindow('ns-ruler', 'Leg marks on paper with a steel scale', { w: 600, h: 330, css: 'light',
+        buttons: [
+          { label: 'Rotate scale:', items: [['⟲ 5°', () => { R.a -= 5; }], ['⟲ 1°', () => { R.a -= 1; }], ['⟲ 0.1°', () => { R.a -= 0.1; }], ['0.1° ⟳', () => { R.a += 0.1; }], ['1° ⟳', () => { R.a += 1; }], ['5° ⟳', () => { R.a += 5; }]] },
+          { label: 'Slide scale (mm):', items: [['◀ 1', () => { R.x -= 1; }], ['◀ 0.1', () => { R.x -= 0.1; }], ['0.1 ▶', () => { R.x += 0.1; }], ['1 ▶', () => { R.x += 1; }], ['▲ 1', () => { R.y -= 1; }], ['▼ 1', () => { R.y += 1; }]] },
+        ],
         footer: () => { const d = document.createElement('div'); d.className = 'ctrls'; d.innerHTML = '<span class="muted">Drag the scale to move it; scroll to rotate it (Shift = fine). Read the scale at each mark.</span>'; return d; },
         onDrag: (dx, dy) => { R.x += dx / k; R.y += dy / k; },
         onWheel: (dir, e) => { R.a += dir * (e.shiftKey ? 0.1 : 1); },
