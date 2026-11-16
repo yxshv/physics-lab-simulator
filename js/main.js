@@ -56,7 +56,13 @@ function open(id, freshSeed = false) {
   current = { id, ctx };
   window.__lab = ctx;
   if (window.innerWidth < 900) setSide(false);
-  requestAnimationFrame(() => { const v = (res.views || [])[0]; if (v) bench.zoomTo(v.x, v.y, v.w, v.h, false); else bench.fit(); });
+  const small = window.innerWidth < 700;
+  setTimeout(() => {
+    const vs = res.views || [];
+    const v = small && vs[1] ? vs[1] : vs[0];
+    if (v) bench.zoomTo(v.x, v.y, v.w, v.h, false); else bench.fit();
+  }, 0);
+  if (small && window.innerHeight > window.innerWidth) ui.toast('Tip: turn your phone sideways for a bigger bench. Pinch to zoom, tap an instrument’s name in the View bar to jump to it.');
 }
 
 function close() {

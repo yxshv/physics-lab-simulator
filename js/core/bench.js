@@ -235,6 +235,16 @@ export class Bench {
     t.style.left = x + 'px'; t.style.top = y + 'px';
   }
   untip() { this.tipEl.style.display = 'none'; }
+  // touch: show the name of what was tapped for a moment
+  tapTip(e, text) {
+    if (!text) return;
+    this.tip(e, text.replace(/<br><span class="tip-hint">[^<]*<\/span>/g, ''));
+    const t = this.tipEl;
+    t.style.top = Math.max(8, e.clientY - t.offsetHeight - 30) + 'px';
+    t.style.left = Math.max(8, Math.min(window.innerWidth - t.offsetWidth - 8, e.clientX - t.offsetWidth / 2)) + 'px';
+    clearTimeout(this._tapT);
+    this._tapT = setTimeout(() => this.untip(), 2200);
+  }
   menu(e, title, items) {
     const m = this.menuEl;
     m.innerHTML = '';
@@ -286,9 +296,10 @@ export class Bench {
     el.setAttribute('data-ctrl', '1');
     el.style.cursor = 'pointer';
     const tipf = typeof tip === 'function' ? tip : () => tip;
-    el.addEventListener('pointerenter', e => this.tip(e, tipf()));
-    el.addEventListener('pointermove', e => this.tip(e, tipf()));
-    el.addEventListener('pointerleave', () => this.untip());
+    el.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') this.tip(e, tipf()); });
+    el.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') this.tip(e, tipf()); });
+    el.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') this.untip(); });
+    if (!menu) el.addEventListener('pointerup', e => { if (e.pointerType === 'touch') this.tapTip(e, tipf()); });
     el.addEventListener('pointerdown', e => e.stopPropagation());
     el.addEventListener('click', (e) => {
       e.stopPropagation();

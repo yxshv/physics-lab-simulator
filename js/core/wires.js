@@ -40,6 +40,7 @@ export class Wires {
       this.pending = { kind: 'sock', sock };
       sock.highlight(true);
       this.ui.hint(`Patch cord from <b>${sock.name}</b> — click the other socket (Esc to cancel). Cord colour: ${this.color}.`);
+      this._bar(`Cord from <b>${sock.name}</b>: tap the other socket`);
       return;
     }
     if (p.kind === 'sock') {
@@ -72,15 +73,39 @@ export class Wires {
     this.pending = { kind: 'lead', lead };
     lead.halo.setAttribute('opacity', 1);
     this.ui.hint(`Holding the <b>${lead.name}</b> plug — click a socket to plug it in, or click the bench to put it down.`);
+    this._bar(`Holding <b>${lead.name}</b>: tap a socket`);
   }
   cancel(quiet) {
     const p = this.pending;
+    this._bar(null);
     if (!p) return;
     if (p.kind === 'sock') p.sock.highlight(false);
     if (p.kind === 'lead') p.lead.halo.setAttribute('opacity', 0);
     this.pending = null;
-    if (!quiet) this.ui.hint('');
-    else this.ui.hint('');
+    this.ui.hint('');
+  }
+  // floating bar while a connection is being made (with a list fallback for small screens)
+  _bar(html) {
+    let b = this.bench.host.querySelector('#pending');
+    if (!html) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('div'); b.id = 'pending'; this.bench.host.appendChild(b); }
+    b.innerHTML = `<span>${html}</span>`;
+    const list = document.createElement('button'); list.className = 'btn'; list.textContent = 'Pick from list';
+    const x = document.createElement('button'); x.className = 'btn ghost'; x.textContent = 'Cancel';
+    list.onclick = (e) => { e.stopPropagation(); this._pickList(e); };
+    x.onclick = (e) => { e.stopPropagation(); this.cancel(); };
+    b.append(list, x);
+  }
+  _pickList(e) {
+    const p = this.pending;
+    if (!p) return;
+    const ok = [...this.socks.values()].filter(s => {
+      if (p.kind === 'sock') return s !== p.sock && this._compatible(p.sock, s.kind, s.allowMixed) && this._free(s);
+      return this._compatible(s, p.lead.kind, p.lead.allowMixed) && this._free(s);
+    }).filter(s => s.el.isConnected && s.el.getAttribute('display') !== 'none');
+    const items = ok.map(s => ({ label: s.name, fn: () => this.clickSocket(s) }));
+    const r = this.bench.host.getBoundingClientRect();
+    this.bench.menu({ clientX: r.left + r.width / 2 - 110, clientY: r.top + 52 }, 'Connect to…', items);
   }
 
   // ------------------------------------------------ patch cords
@@ -169,6 +194,7 @@ export class Wires {
     const d = this._cablePath(a, end, lead.sag);
     this._strokeCable(G, d, cableColor, lead.width ?? (lead.kind === 'banana' ? 2.2 : 3.4));
     const plugG = g(G);
+    circ(plugG, end.x, end.y - (lead.plugged ? 0 : 8), lead.plugged ? 9 : 13, { fill: 'rgba(0,0,0,0)', pe: 'all' });
     if (lead.plugged) this._plugHead(plugG, end, lead.kind, plugColor);
     else {
       // plug lying on the bench

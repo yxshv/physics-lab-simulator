@@ -4,10 +4,13 @@ import { h, g, txt, rect, circ, line, path, poly, clamp } from './svg.js';
 function hook(bench, el, tipFn) {
   el.setAttribute('data-ctrl', '1');
   el.style.cursor = 'pointer';
-  el.addEventListener('pointerenter', e => bench.tip(e, tipFn()));
-  el.addEventListener('pointermove', e => { if (!el._dragging) bench.tip(e, tipFn()); });
-  el.addEventListener('pointerleave', () => bench.untip());
+  el.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') bench.tip(e, tipFn()); });
+  el.addEventListener('pointermove', e => { if (!el._dragging && e.pointerType !== 'touch') bench.tip(e, tipFn()); });
+  el.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') bench.untip(); });
+  el.addEventListener('pointerup', e => { if (e.pointerType === 'touch') bench.tapTip(e, tipFn()); });
 }
+// generous invisible touch target
+function hitArea(G, r) { return circ(G, 0, 0, r, { fill: 'rgba(0,0,0,0)', pe: 'all' }); }
 
 // ---------------------------------------------------------------- Knob
 // Continuous (min..max), stepped (steps array), or endless screw (unitPerTurn).
@@ -30,6 +33,7 @@ export class Knob {
     this.idx = o.index ?? 0;
     this.value = this.steps ? this.steps[this.idx] : (o.value ?? this.min);
     this.el = g(parent, { transform: `translate(${o.x},${o.y})` });
+    hitArea(this.el, Math.max(8, (o.r ?? 6) * 1.45));
     this.rot = g(this.el);
     drawKnob(this.rot, o.r ?? 6, o.style ?? 'ses');
     if (o.style === 'flat') this.rot.setAttribute('data-flat', '1');
@@ -216,6 +220,7 @@ export class Toggle {
     this.orient = o.orient || 'v';
     this.s = o.size ?? 1;
     this.el = g(parent, { transform: `translate(${o.x},${o.y}) scale(${this.s})` });
+    hitArea(this.el, 9);
     circ(this.el, 0, 0, 4.6, { fill: 'url(#gChromeR)', stroke: '#555', sw: 0.4 });
     circ(this.el, 0, 0, 2.6, { fill: '#9aa1a7', stroke: '#555', sw: 0.3 });
     this.lever = g(this.el);
@@ -269,6 +274,7 @@ export class Button {
     this.latch = !!o.latch; this.value = !!o.value; this.onPress = o.onPress;
     const w = o.w ?? 8, hh = o.h ?? 8;
     this.el = g(parent, { transform: `translate(${o.x},${o.y})` });
+    hitArea(this.el, Math.max(6, Math.max(w, hh) * 0.75));
     rect(this.el, -w / 2 - 0.8, -hh / 2 - 0.8, w + 1.6, hh + 1.6, { fill: o.bezel ?? '#9c9a94', r: o.round ? (w + 1.6) / 2 : 1 });
     this.cap = rect(this.el, -w / 2, -hh / 2, w, hh, { fill: o.color ?? '#e7e4dc', stroke: '#777', sw: 0.4, r: o.round ? w / 2 : 0.8 });
     this.color = o.color ?? '#e7e4dc';
@@ -428,6 +434,7 @@ export class Socket {
     this.s = o.scale ?? 1;
     this.el = g(parent, { transform: `translate(${o.x},${o.y}) scale(${this.s})` });
     const c = SOCKET_COLORS[this.color] ?? this.color;
+    hitArea(this.el, this.kind === 'banana' ? 7.5 : 10.5);
     if (this.kind === 'banana') {
       circ(this.el, 0, 0.6, 4.6, { fill: 'rgba(0,0,0,0.25)' });
       circ(this.el, 0, 0, 4.4, { fill: c, stroke: '#000', sw: 0.35 });
