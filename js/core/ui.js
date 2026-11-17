@@ -81,6 +81,13 @@ export class UI {
       try { ok = s.done ? !!s.done() : false; } catch (e) { ok = false; }
       li.classList.toggle('done', ok);
       li.firstChild.textContent = ok ? '✓' : '';
+      if (s.why) {
+        let w = '';
+        try { w = ok ? '' : (s.why() || ''); } catch { w = ''; }
+        let el2 = li.querySelector('.why');
+        if (!el2) { el2 = document.createElement('div'); el2.className = 'why'; li.lastChild.appendChild(el2); }
+        el2.innerHTML = w ? 'Now: ' + w : '';
+      }
     }
   }
   remark(text, level = 'warn') {

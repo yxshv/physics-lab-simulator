@@ -283,7 +283,7 @@ export default {
       const a = topo.i1, b = topo.i2;
       let msg = '';
       if (Math.abs(a) > 0.05 && Math.abs(b) > 0.05) {
-        if (Math.sign(a) !== Math.sign(b)) msg = 'The two coils are connected so that their fields oppose — the field in the gap will be almost zero. Swap the leads on one coil.';
+        if (Math.abs(Math.abs(a) - 1) < 0.05 && Math.abs(Math.abs(b) - 1) < 0.05 && Math.sign(a) !== Math.sign(b)) msg = 'The two coils are connected so that their fields oppose — the field in the gap will be almost zero. Swap the leads on one coil.';
         else if (Math.abs(Math.abs(a) - 1) > 0.05 || Math.abs(Math.abs(b) - 1) > 0.05) msg = 'The two coils are in parallel (each one is across the supply), so each carries only part of the current. Connect them in series: DPS (+) → coil 1 A, coil 1 B → coil 2 A, coil 2 B → DPS (−).';
       }
       if (msg && msg !== lastTopoMsg) ui.remark(msg, 'warn');
@@ -376,7 +376,16 @@ export default {
 
     const cosOk = (t0) => Math.abs(((S.theta - t0) % 180 + 270) % 180 - 90) > 87; // within 3 deg of 0 or 180
     const steps = [
-      { t: 'Connect the two electromagnet coils <b>in series</b> to the DPS-50 output so that their fields add.', done: () => Math.abs(topo.i1 - 1) < 0.02 && Math.abs(topo.i2 - 1) < 0.02 || (Math.abs(topo.i1 + 1) < 0.02 && Math.abs(topo.i2 + 1) < 0.02) },
+      { t: 'Connect the two electromagnet coils <b>in series</b> to the DPS-50 output so that their fields add: DPS (+) → coil 1 red, coil 1 black → coil 2 red, coil 2 black → DPS (−).', done: () => Math.abs(topo.i1 - 1) < 0.02 && Math.abs(topo.i2 - 1) < 0.02 || (Math.abs(topo.i1 + 1) < 0.02 && Math.abs(topo.i2 + 1) < 0.02),
+        why: () => {
+          const a = topo.i1, b = topo.i2, A = Math.abs(a) > 0.02, B = Math.abs(b) > 0.02;
+          if (wires.connected('dps.pos', 'dps.neg') && Math.abs(topo.vout) < 0.5) return 'the DPS-50 output is short-circuited by a cord that bypasses the coils.';
+          if (!A && !B) return 'there is no closed loop from DPS-50 (+) through the coils back to (−).';
+          if (A && !B) return 'only coil 1 carries current — coil 2 is not in the loop.';
+          if (!A && B) return 'only coil 2 carries current — coil 1 is not in the loop.';
+          if (Math.abs(Math.abs(a) - 1) > 0.05 || Math.abs(Math.abs(b) - 1) > 0.05) return 'the coils are in <b>parallel</b> — each coil is wired straight to the DPS-50, so the current splits between them. Use only 3 cords: DPS (+) → coil 1 red, coil 1 black → coil 2 red, coil 2 black → DPS (−). Tap a socket with two cords to remove the extra one.';
+          return 'the coils are in series but one is reversed, so their fields cancel. Swap the two cords on one coil (red ↔ black).';
+        } },
       { t: 'Switch on the DPS-50 with <i>Current Adj.</i> at minimum.', done: () => dpsOn.value && S.dpsOnOk === true },
       { t: 'Mount the gaussmeter probe on the stand and switch the gaussmeter on.', done: () => S.mounted === 'gauss' && dgmOn.value },
       { t: 'With the probe out of the field (magnet current zero) set the gaussmeter to zero with ZERO ADJ.', done: () => dgmOn.value && Math.abs(P.gzero + zeroKnob.value * 90) < 1.5 },

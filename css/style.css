@@ -56,6 +56,8 @@ button { font: inherit; touch-action: manipulation; }
 .steps li.done .tick { background: var(--ok); }
 .steps li.done span:last-child { color: #4b5a4b; }
 .steps li span:last-child { grid-column: 2; }
+.steps .why { color: var(--warn); font-size: 12px; margin-top: 3px; }
+.steps .why:empty { display: none; }
 .remarks { padding-left: 0; list-style: none; margin: 0; }
 .remarks li { padding: 5px 8px; border-left: 3px solid #ccc; margin: 4px 0; background: #faf9f7; font-size: 13px; }
 .remarks li.warn { border-color: var(--warn); }
