@@ -277,7 +277,18 @@ export default {
       return { vout, i1, i2 }; // per 1 A of source current
     }
     let topo = magnetCurrents();
-    wires.onChange(() => { topo = magnetCurrents(); });
+    let lastTopoMsg = '';
+    wires.onChange(() => {
+      topo = magnetCurrents();
+      const a = topo.i1, b = topo.i2;
+      let msg = '';
+      if (Math.abs(a) > 0.05 && Math.abs(b) > 0.05) {
+        if (Math.sign(a) !== Math.sign(b)) msg = 'The two coils are connected so that their fields oppose — the field in the gap will be almost zero. Swap the leads on one coil.';
+        else if (Math.abs(Math.abs(a) - 1) > 0.05 || Math.abs(Math.abs(b) - 1) > 0.05) msg = 'The two coils are in parallel (each one is across the supply), so each carries only part of the current. Connect them in series: DPS (+) → coil 1 A, coil 1 B → coil 2 A, coil 2 B → DPS (−).';
+      }
+      if (msg && msg !== lastTopoMsg) ui.remark(msg, 'warn');
+      lastTopoMsg = msg;
+    });
 
     function probeConn() {
       // which probe contacts are tied to which DHE sockets
